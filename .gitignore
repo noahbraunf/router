@@ -123,3 +123,9 @@ tags
 [._]*.un~
 
 # End of https://www.toptal.com/developers/gitignore/api/cmake,linux,macos,vim,c++
+# clangd cache
+.cache/
+# build directory
+build/
+# executable name
+router
