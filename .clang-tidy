@@ -1,0 +1,99 @@
+# Clang-Tidy Configuration for Router Project
+#
+# Run manually: clang-tidy src/*.cpp -- -std=c++17 -Isrc
+# Or use: make analyze
+
+---
+# Enable check categories
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  google-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -readability-braces-around-statements,
+  -google-readability-braces-around-statements,
+  -hicpp-braces-around-statements,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -fuchsia-*,
+  -llvmlibc-*,
+  -altera-*,
+
+# Treat all warnings as errors
+WarningsAsErrors: ""
+
+# Header filter - only check our own headers
+HeaderFilterRegex: 'src/.*\.hpp$'
+
+# Check-specific options
+CheckOptions:
+  # Naming conventions
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: "_"
+  - key: readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.NamespaceCase
+    value: camelBack
+
+  # Function size limits
+  - key: readability-function-size.LineThreshold
+    value: 100
+  - key: readability-function-size.StatementThreshold
+    value: 50
+  - key: readability-function-size.ParameterThreshold
+    value: 6
+
+  # Cognitive complexity
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 25
+
+  # Modernize options
+  - key: modernize-use-auto.MinTypeNameLength
+    value: 5
+  - key: modernize-use-nullptr.NullMacros
+    value: "NULL"
+  - key: modernize-loop-convert.MinConfidence
+    value: reasonable
+  - key: modernize-pass-by-value.IncludeStyle
+    value: google
+
+  # Performance options
+  - key: performance-unnecessary-value-param.AllowedTypes
+    value: "std::string_view"
+
+  # Misc options
+  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: true
+
+  # Cert options
+  - key: cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField
+    value: true
