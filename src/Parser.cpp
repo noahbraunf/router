@@ -31,7 +31,7 @@ std::optional<std::uint32_t> ip_str_to_num(std::string_view addr) {
         }
     }
 
-    if (digit_count == 0 || octet > 255 || shift != 0) {
+    if (digit_count == 0 || shift != 0) {
         return std::nullopt;
     }
     return result | octet;

@@ -96,6 +96,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native")
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+option(ENABLE_TESTING "Enable building tests" OFF)
 
 set(SANITIZER_FLAGS "")
 
@@ -127,8 +128,7 @@ if(ENABLE_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY
             ${CLANG_TIDY_PROGRAM};
             -checks=*,-fuchsia-*,-llvmlibc-*,-altera-*;
-            -warnings-as-errors=*;
-        )
+            -warnings-as-errors=*;)
   else()
     message(WARNING "clang-tidy requested but not found")
   endif()
@@ -143,23 +143,49 @@ if(ENABLE_CPPCHECK)
             --enable=all;
             --suppress=missingIncludeSystem;
             --inline-suppr;
-            --inconclusive;
-        )
+            --inconclusive;)
   else()
     message(WARNING "cppcheck requested but not found")
   endif()
 endif()
 
-set(ROUTER_SOURCES
-    src/main.cpp
+# ============================================================================
+# Core Library (shared between router and tests)
+# ============================================================================
+
+set(ROUTER_LIB_SOURCES
     src/IPv4Header.cpp
+    src/Parser.cpp
+    # Add other source files here (but NOT main.cpp)
 )
 
 set(ROUTER_HEADERS
     src/IPv4Header.hpp
+    src/Parser.hpp
 )
 
-add_executable(router ${ROUTER_SOURCES} ${ROUTER_HEADERS})
+add_library(router_lib STATIC ${ROUTER_LIB_SOURCES} ${ROUTER_HEADERS})
+
+target_include_directories(router_lib
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+)
+
+target_compile_options(router_lib PRIVATE ${WARNING_FLAGS})
+
+if(SANITIZER_FLAGS)
+  target_compile_options(router_lib PRIVATE ${SANITIZER_FLAGS})
+  target_link_options(router_lib PRIVATE ${SANITIZER_FLAGS})
+endif()
+
+# ============================================================================
+# Main Executable
+# ============================================================================
+
+add_executable(router src/main.cpp)
+
+target_link_libraries(router PRIVATE router_lib)
 
 target_compile_options(router PRIVATE ${WARNING_FLAGS})
 
@@ -167,12 +193,6 @@ if(SANITIZER_FLAGS)
   target_compile_options(router PRIVATE ${SANITIZER_FLAGS})
   target_link_options(router PRIVATE ${SANITIZER_FLAGS})
 endif()
-
-target_include_directories(router
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/include
-)
 
 set_target_properties(router PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -186,8 +206,7 @@ if(CLANG_FORMAT_PROGRAM)
         COMMAND ${CLANG_FORMAT_PROGRAM} -i ${ROUTER_SOURCES} ${ROUTER_HEADERS}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Formatting source files with clang-format"
-        VERBATIM
-    )
+        VERBATIM)
 endif()
 
 add_custom_target(clean-all
@@ -195,6 +214,61 @@ add_custom_target(clean-all
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
     COMMENT "Cleaning all build artifacts"
 )
+
+# ============================================================================
+# Testing with RapidCheck
+# ============================================================================
+
+if(ENABLE_TESTING)
+  message(STATUS "Testing enabled - fetching RapidCheck")
+
+  include(FetchContent)
+
+  FetchContent_Declare(
+    rapidcheck
+    GIT_REPOSITORY https://github.com/emil-e/rapidcheck.git
+    GIT_TAG        master
+  )
+
+  # Don't install rapidcheck, just use it for testing
+  set(RC_ENABLE_GTEST OFF CACHE BOOL "" FORCE)
+  set(RC_ENABLE_GMOCK OFF CACHE BOOL "" FORCE)
+
+  FetchContent_MakeAvailable(rapidcheck)
+
+  enable_testing()
+
+  # Collect all test source files from test/ directory
+  file(GLOB TEST_SOURCES "${CMAKE_SOURCE_DIR}/test/*.cpp")
+
+  if(TEST_SOURCES)
+    foreach(test_source ${TEST_SOURCES})
+      # Extract test name from filename (e.g., test/ip_parser_test.cpp -> ip_parser_test)
+      get_filename_component(TEST_NAME ${test_source} NAME_WE)
+
+      add_executable(${TEST_NAME} ${test_source})
+
+      target_link_libraries(${TEST_NAME} PRIVATE rapidcheck router_lib)
+
+      target_compile_options(${TEST_NAME} PRIVATE ${WARNING_FLAGS})
+
+      if(SANITIZER_FLAGS)
+        target_compile_options(${TEST_NAME} PRIVATE ${SANITIZER_FLAGS})
+        target_link_options(${TEST_NAME} PRIVATE ${SANITIZER_FLAGS})
+      endif()
+
+      set_target_properties(${TEST_NAME} PROPERTIES
+          RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/test
+      )
+
+      add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+
+      message(STATUS "  Added test: ${TEST_NAME}")
+    endforeach()
+  else()
+    message(STATUS "  No test files found in test/ directory")
+  endif()
+endif()
 
 message(STATUS "")
 message(STATUS "\tConfiguration Summary")
@@ -208,6 +282,7 @@ message(STATUS "Options:")
 message(STATUS "\tENABLE_ASAN:\t\t${ENABLE_ASAN}")
 message(STATUS "\tENABLE_UBSAN:\t\t${ENABLE_UBSAN}")
 message(STATUS "\tENABLE_TSAN:\t\t${ENABLE_TSAN}")
+message(STATUS "\tENABLE_TESTING:\t\t${ENABLE_TESTING}")
 message(STATUS "\tENABLE_CLANG_TIDY:\t\t${ENABLE_CLANG_TIDY}")
 message(STATUS "\tENABLE_CPPCHECK:\t\t${ENABLE_CPPCHECK}")
 message(STATUS "")
