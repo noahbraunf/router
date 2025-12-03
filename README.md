@@ -15,6 +15,7 @@
       - [Output File](#output-file)
     - [Functionality](#functionality)
   - [Additional Constraints](#additional-constraints)
+  - [Testing](#testing)
 <!--toc:end-->
 
 ---
@@ -125,3 +126,32 @@ After these steps are performed for all lines in the input file, close the outpu
   - In the routing table there will not be entries with next-hop addresses that are not directly attached to one of the local subnets
   - Each interface will have a unique name and configuration. However, remember that one interface might be attached to a network that is a subnet of another network.
 - No external libraries used within the executable
+- Must be able to be tarballed with a Makefile to simply type `make` to
+
+---
+
+## Testing
+
+Unit tests are implemented using [RapidCheck](https://github.com/emil-e/rapidcheck) for property-based testing.
+
+1. **Enable testing during configuration:**
+
+    ```bash
+    cd build
+    cmake .. -DENABLE_TESTING=ON
+    ```
+
+2. **Build the tests:**
+
+    ```bash
+    make
+    ```
+
+3. **Run the tests:**
+    You can run all tests using CTest or execute the test binary directly:
+
+    ```bash
+    ctest --output-on-failure
+    # OR
+    ./test/TestParse
+    ```
