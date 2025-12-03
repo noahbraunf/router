@@ -106,8 +106,8 @@ IPv4HeaderBuilder& IPv4HeaderBuilder::set_dst_addr(std::uint32_t addr) {
 }
 IPv4HeaderBuilder& IPv4HeaderBuilder::clear_opts() {
     _size = MIN_HEADER_BYTES;
+    update_ihl();
     return *this;
-    // TODO: (noah) Update IHL as well
 }
 IPv4HeaderBuilder& IPv4HeaderBuilder::append_opt(const std::uint8_t* opt_data,
                                                  std::size_t         opt_len) {
@@ -116,16 +116,24 @@ IPv4HeaderBuilder& IPv4HeaderBuilder::append_opt(const std::uint8_t* opt_data,
     }
     std::memcpy(&_buffer[_size], opt_data, opt_len);
     _size += opt_len;
-    // TODO: update ihl size
+    update_ihl();
     return *this;
 }
 IPv4HeaderBuilder& IPv4HeaderBuilder::pad_opts() {
     while (_size % 4 != 0 && _size < MAX_HEADER_BYTES) {
         _buffer[_size++] = 0;
     }
-    // TODO: update IHL size
+    update_ihl();
     return *this;
 }
+
+void IPv4HeaderBuilder::update_ihl() {
+    assert(_size % 4 == 0);  // header is in 4 byte blocks
+    auto ihl = static_cast<std::uint8_t>(_size / 4U);
+
+    _buffer[0] = static_cast<std::uint8_t>((_buffer[0] & 0xF0U) | (ihl & 0x0FU));
+}
+
 IPv4HeaderBuilder& IPv4HeaderBuilder::compute_checksum() {
     write_uint16(10, 0);
     std::uint32_t sum = 0;
@@ -140,7 +148,7 @@ IPv4HeaderBuilder& IPv4HeaderBuilder::compute_checksum() {
 }
 IPv4HeaderView IPv4HeaderBuilder::view() const {
     auto view = IPv4HeaderView::from_bytes(_buffer.data(), _size);
-    assert(v.has_value());
+    assert(view.has_value());
     return *view;
 }
 void IPv4HeaderBuilder::write_uint16(std::size_t offset, std::uint16_t value) {

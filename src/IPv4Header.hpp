@@ -1,5 +1,5 @@
-#ifndef IPV4_HEADER_
-#define IPV4_HEADER_
+#ifndef IPV4_HEADER_H_
+#define IPV4_HEADER_H_
 
 #include <array>
 #include <cstddef>
@@ -99,6 +99,7 @@ class IPv4HeaderBuilder {
     [[nodiscard]] IPv4HeaderView      view() const;
 
    private:
+    void update_ihl();
     void write_uint16(std::size_t offset, std::uint16_t value);
     void write_uint32(std::size_t offset, std::uint32_t value);
     std::array<std::uint8_t, MAX_HEADER_BYTES> _buffer{};
