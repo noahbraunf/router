@@ -2,9 +2,10 @@
 
 **An IPv4 router emulator.**
 
----
+______________________________________________________________________
 
 <!--toc:start-->
+
 - [router](#router)
   - [Functional Requirements (TODOs)](#functional-requirements-todos)
     - [Basic Requirements](#basic-requirements)
@@ -16,9 +17,10 @@
     - [Functionality](#functionality)
   - [Additional Constraints](#additional-constraints)
   - [Testing](#testing)
+
 <!--toc:end-->
 
----
+______________________________________________________________________
 
 This project emulates the behavior of a standard IPv4 router. It takes in two input files: a configuration for the router in the form of a list of interfaces and associated subnets as well as a route table in the form of a list of networks and the next-hop used to reach that subnet. The program processes these files and then receives a series of packets (just a list of IP addresses that need to be processed). It then determines where the packet should be sent.
 
@@ -128,7 +130,7 @@ After these steps are performed for all lines in the input file, close the outpu
 - No external libraries used within the executable
 - Must be able to be tarballed with a Makefile to simply type `make` to
 
----
+______________________________________________________________________
 
 ## Testing
 
@@ -136,22 +138,22 @@ Unit tests are implemented using [RapidCheck](https://github.com/emil-e/rapidche
 
 1. **Enable testing during configuration:**
 
-    ```bash
-    cd build
-    cmake .. -DENABLE_TESTING=ON
-    ```
+   ```bash
+   cd build
+   cmake .. -DENABLE_TESTING=ON
+   ```
 
-2. **Build the tests:**
+1. **Build the tests:**
 
-    ```bash
-    make
-    ```
+   ```bash
+   make
+   ```
 
-3. **Run the tests:**
-    You can run all tests using CTest or execute the test binary directly:
+1. **Run the tests:**
+   You can run all tests using CTest or execute the test binary directly:
 
-    ```bash
-    ctest --output-on-failure
-    # OR
-    ./test/TestParse
-    ```
+   ```bash
+   ctest --output-on-failure
+   # OR
+   ./test/TestParse
+   ```
