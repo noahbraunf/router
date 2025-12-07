@@ -228,24 +228,23 @@ This section breaks down the remaining work into smaller, manageable tasks.
 
 **Status:** Not started
 
-- [ ] **Task 3.1:** Create generic line parser utilities
+- [x] **Task 3.1:** Create generic line parser utilities
   - `trim_whitespace(std::string_view)` - remove leading/trailing whitespace
   - `is_comment_or_empty(std::string_view)` - check if line should be skipped
-  - `split_on_whitespace(std::string_view)` - split line into tokens
 
-- [ ] **Task 3.2:** Implement interface configuration file parser
+- [x] **Task 3.2:** Implement interface configuration file parser
   - Parse format: `InterfaceName<SP+>IPAddress/netmask`
   - Handle arbitrary whitespace before/after content
   - Skip comment lines (starting with `#`)
   - Return `std::vector<Interface>`
 
-- [ ] **Task 3.3:** Implement route table file parser
+- [x] **Task 3.3:** Implement route table file parser
   - Parse format: `Network/netmask<SP+>nexthop`
   - Handle arbitrary whitespace
   - Skip comment lines
   - Return `std::vector<Route>`
 
-- [ ] **Task 3.4:** Implement input file parser (destination IPs)
+- [x] **Task 3.4:** Implement input file parser (destination IPs)
   - Parse one IP address per line
   - Handle whitespace and comments
   - Support reading from stdin or file

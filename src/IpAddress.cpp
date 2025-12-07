@@ -1,4 +1,4 @@
-#include "Parser.hpp"
+#include "IpAddress.hpp"
 
 #include <optional>
 
@@ -35,4 +35,9 @@ std::optional<std::uint32_t> ip_str_to_num(std::string_view addr) {
         return std::nullopt;
     }
     return result | octet;
+}
+
+std::string ip_num_to_str(std::uint32_t addr) {
+    return std::to_string((addr >> 24U) & 0xFFU) + "." + std::to_string((addr >> 16U) & 0xFFU) +
+           "." + std::to_string((addr >> 8U) & 0xFFU) + "." + std::to_string(addr & 0xFFU);
 }

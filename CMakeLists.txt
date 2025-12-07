@@ -154,14 +154,24 @@ endif()
 # ============================================================================
 
 set(ROUTER_LIB_SOURCES
-    src/IPv4Header.cpp
-    src/Parser.cpp
+    src/ArgParser.cpp
+    src/FileParser.cpp
+    src/Interface.cpp
+    src/IpAddress.cpp
+    src/Router.cpp
+    src/RouteTable.cpp
     # Add other source files here (but NOT main.cpp)
 )
 
 set(ROUTER_HEADERS
-    src/IPv4Header.hpp
-    src/Parser.hpp
+    src/ArgParser.hpp
+    src/FileParser.hpp
+    src/Interface.hpp
+    src/IpAddress.hpp
+    src/Router.hpp
+    src/RouteTable.hpp
+    src/Logger.hpp
+    src/Route.hpp
 )
 
 add_library(router_lib STATIC ${ROUTER_LIB_SOURCES} ${ROUTER_HEADERS})

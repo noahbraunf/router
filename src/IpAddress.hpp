@@ -1,5 +1,5 @@
-#ifndef PARSER_H_
-#define PARSER_H_
+#ifndef IP_ADDRESS_HPP_
+#define IP_ADDRESS_HPP_
 
 #include <cstdint>
 #include <optional>
@@ -19,4 +19,6 @@ class IpAddress {
 };
 
 std::optional<std::uint32_t> ip_str_to_num(std::string_view addr);
+std::string                  ip_num_to_str(std::uint32_t addr);
+
 #endif

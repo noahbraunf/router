@@ -1,182 +1,160 @@
+# Router Project Makefile
 # Usage:
-#		make							- Build release version
-#		make debug				- Build debug version
-#		make asan					- Build with AddressSanitizer
-#		make ubsan				- Build with UndefinedBehaviorSanitizer  
-#		make sanitize			- Build with both ASan and UBSan
-#		make analyze			- Build with static analysis (clang-tidy + cppcheck)
-#		make test					- Build and run property-based tests with RapidCheck
-#		make clean				- Remove build artifacts
-#		make format				- Format source code with clang-format
-#		make help					- Show this help
+#   make              - Build debug version (default)
+#   make release      - Build optimized release version
+#   make debug        - Build debug version with symbols
+#   make asan         - Build with AddressSanitizer
+#   make ubsan        - Build with UndefinedBehaviorSanitizer
+#   make sanitize     - Build with both ASan and UBSan
+#   make test         - Build and run tests (requires RapidCheck)
+#   make clean        - Remove build artifacts
+#   make format       - Format source code with clang-format
+#   make help         - Show this help
 
-# Build directory
+# Compiler
+CXX := g++
+
+# Directories
+SRC_DIR := src
+TEST_DIR := test
 BUILD_DIR := build
+OBJ_DIR := $(BUILD_DIR)/obj
+TEST_OBJ_DIR := $(BUILD_DIR)/test_obj
 
-# CMake generator (Ninja if available, otherwise Unix Makefiles)
-CMAKE_GENERATOR := $(shell which ninja > /dev/null 2>&1 && echo "Ninja" || echo "Unix Makefiles")
+# Target
+TARGET := router
+
+# Source files (add new source files here)
+LIB_SOURCES := \
+    $(SRC_DIR)/RouteTable.cpp \
+    $(SRC_DIR)/IpAddress.cpp \
+    $(SRC_DIR)/Router.cpp \
+    $(SRC_DIR)/Interface.cpp \
+    $(SRC_DIR)/FileParser.cpp \
+    $(SRC_DIR)/ArgParser.cpp
+
+MAIN_SOURCE := $(SRC_DIR)/main.cpp
+
+# Object files
+LIB_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(LIB_SOURCES))
+MAIN_OBJECT := $(OBJ_DIR)/main.o
+
+# C++ Standard and common flags
+CXXSTD := -std=c++17
+INCLUDES := -I$(SRC_DIR)
+
+# Warning flags
+WARNINGS := \
+    -Wall \
+    -Wextra \
+    -Wpedantic \
+    -Wshadow \
+    -Wnon-virtual-dtor \
+    -Wold-style-cast \
+    -Wcast-align \
+    -Wunused \
+    -Woverloaded-virtual \
+    -Wconversion \
+    -Wsign-conversion \
+    -Wnull-dereference \
+    -Wdouble-promotion \
+    -Wformat=2 \
+    -Wimplicit-fallthrough \
+    -Werror=return-type
+
+# GCC-specific warnings
+ifeq ($(CXX),g++)
+    WARNINGS += \
+        -Wmisleading-indentation \
+        -Wduplicated-cond \
+        -Wduplicated-branches \
+        -Wlogical-op \
+        -Wuseless-cast
+endif
+
+# Build type flags
+DEBUG_FLAGS := -g3 -O0 -DDEBUG -fno-omit-frame-pointer
+RELEASE_FLAGS := -O3 -DNDEBUG -march=native
+
+# Sanitizer flags
+ASAN_FLAGS := -fsanitize=address -fno-omit-frame-pointer
+UBSAN_FLAGS := -fsanitize=undefined
+
+# Default build type
+BUILD_TYPE ?= debug
+
+# Set flags based on build type
+ifeq ($(BUILD_TYPE),release)
+    CXXFLAGS := $(CXXSTD) $(INCLUDES) $(WARNINGS) $(RELEASE_FLAGS)
+else ifeq ($(BUILD_TYPE),asan)
+    CXXFLAGS := $(CXXSTD) $(INCLUDES) $(WARNINGS) $(DEBUG_FLAGS) $(ASAN_FLAGS)
+    LDFLAGS += $(ASAN_FLAGS)
+else ifeq ($(BUILD_TYPE),ubsan)
+    CXXFLAGS := $(CXXSTD) $(INCLUDES) $(WARNINGS) $(DEBUG_FLAGS) $(UBSAN_FLAGS)
+    LDFLAGS += $(UBSAN_FLAGS)
+else ifeq ($(BUILD_TYPE),sanitize)
+    CXXFLAGS := $(CXXSTD) $(INCLUDES) $(WARNINGS) $(DEBUG_FLAGS) $(ASAN_FLAGS) $(UBSAN_FLAGS)
+    LDFLAGS += $(ASAN_FLAGS) $(UBSAN_FLAGS)
+else
+    CXXFLAGS := $(CXXSTD) $(INCLUDES) $(WARNINGS) $(DEBUG_FLAGS)
+endif
 
 # Default target
 .DEFAULT_GOAL := debug
 
 # Phony targets
-.PHONY: all release debug asan ubsan tsan sanitize analyze test clean distclean format help
+.PHONY: all release debug asan ubsan sanitize clean format help
 
-# =
 # Build Targets
-# =
-
 all: debug
 
-release:
-	@echo "Building Release"
-	@mkdir -p $(BUILD_DIR)/release
-	@cd $(BUILD_DIR)/release && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Release \
-		../..
-	@cmake --build $(BUILD_DIR)/release
-	@echo "Build Complete: ./router"
-
 debug:
-	@echo "Building Debug"
-	@mkdir -p $(BUILD_DIR)/debug
-	@cd $(BUILD_DIR)/debug && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		../..
-	@cmake --build $(BUILD_DIR)/debug
-	@echo "Build Complete: ./router"
+	@$(MAKE) $(TARGET) BUILD_TYPE=debug
+
+release:
+	@$(MAKE) $(TARGET) BUILD_TYPE=release
 
 asan:
-	@echo "Building with AddressSanitizer"
-	@mkdir -p $(BUILD_DIR)/asan
-	@cd $(BUILD_DIR)/asan && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_ASAN=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/asan
-	@echo "Build Complete: ./router (with ASan)"
-	@echo "Note: Run with ASAN_OPTIONS=detect_leaks=1 for leak detection"
+	@$(MAKE) $(TARGET) BUILD_TYPE=asan
 
 ubsan:
-	@echo "Building with UndefinedBehaviorSanitizer"
-	@mkdir -p $(BUILD_DIR)/ubsan
-	@cd $(BUILD_DIR)/ubsan && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_UBSAN=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/ubsan
-	@echo "Build Complete: ./router (with UBSan)"
-
-tsan:
-	@echo "Building with ThreadSanitizer"
-	@mkdir -p $(BUILD_DIR)/tsan
-	@cd $(BUILD_DIR)/tsan && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_TSAN=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/tsan
-	@echo "Build Complete: ./router (with TSan)"
+	@$(MAKE) $(TARGET) BUILD_TYPE=ubsan
 
 sanitize:
-	@echo "Building with ASan + UBSan"
-	@mkdir -p $(BUILD_DIR)/sanitize
-	@cd $(BUILD_DIR)/sanitize && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_ASAN=ON \
-		-DENABLE_UBSAN=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/sanitize
-	@echo "Build Complete: ./router (with ASan + UBSan)"
+	@$(MAKE) $(TARGET) BUILD_TYPE=sanitize
 
+# Main target
+$(TARGET): $(LIB_OBJECTS) $(MAIN_OBJECT)
+	@echo "Linking $(TARGET)"
+	@$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+	@echo "Build complete: ./$(TARGET)"
 
-analyze:
-	@echo "Building with Static Analysis"
-	@mkdir -p $(BUILD_DIR)/analyze
-	@cd $(BUILD_DIR)/analyze && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_CLANG_TIDY=ON \
-		-DENABLE_CPPCHECK=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/analyze
-	@echo "Analysis Complete"
+# Compile source files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+	@echo "Compiling $<"
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
-test:
-	@echo "Building and Running Tests with RapidCheck"
-	@mkdir -p $(BUILD_DIR)/test
-	@cd $(BUILD_DIR)/test && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_TESTING=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/test
-	@cd $(BUILD_DIR)/test && ctest --output-on-failure
-	@echo "Tests Complete"
-
-test-asan:
-	@echo "Building and Running Tests with ASan"
-	@mkdir -p $(BUILD_DIR)/test-asan
-	@cd $(BUILD_DIR)/test-asan && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_TESTING=ON \
-		-DENABLE_ASAN=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/test-asan
-	@cd $(BUILD_DIR)/test-asan && ctest --output-on-failure
-	@echo "Tests Complete (with ASan)"
-
-test-verbose:
-	@echo "Building and Running Tests (Verbose)"
-	@mkdir -p $(BUILD_DIR)/test
-	@cd $(BUILD_DIR)/test && cmake \
-		-G "$(CMAKE_GENERATOR)" \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DENABLE_TESTING=ON \
-		../..
-	@cmake --build $(BUILD_DIR)/test
-	@cd $(BUILD_DIR)/test && ctest --output-on-failure --verbose
-	@echo "Tests Complete"
+# Create build directories
+$(OBJ_DIR):
+	@mkdir -p $(OBJ_DIR)
 
 format:
 	@if command -v clang-format > /dev/null 2>&1; then \
-		echo " Formatting source files "; \
-		find src test -name '*.cpp' -o -name '*.hpp' 2>/dev/null | xargs clang-format -i; \
-		echo " Formatting Complete "; \
+	    echo "Formatting source files..."; \
+	    find $(SRC_DIR) $(TEST_DIR) -name '*.cpp' -o -name '*.hpp' 2>/dev/null | xargs clang-format -i; \
+	    echo "Formatting complete"; \
 	else \
-		echo "Error: clang-format not found. Install with: sudo apt install clang-format"; \
-		exit 1; \
+	    echo "Error: clang-format not found"; \
+	    exit 1; \
 	fi
 
 clean:
-	@echo " Cleaning build directory "
+	@echo "Cleaning..."
 	@rm -rf $(BUILD_DIR)
-	@rm -f router
-	@rm -f compile_commands.json
-	@find test -maxdepth 1 -type f -executable -delete 2>/dev/null || true
-	@echo " Clean Complete "
-
-distclean: clean
-	@echo " Deep cleaning "
-	@rm -rf .cache
-	@rm -f .clang-tidy
-	@rm -f .clang-format
-	@echo " Distclean Complete "
-
-compile-commands:
-	@mkdir -p $(BUILD_DIR)/compile-commands
-	@cd $(BUILD_DIR)/compile-commands && cmake \
-		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-		-DENABLE_TESTING=ON \
-		../..
-	@ln -sf $(BUILD_DIR)/compile-commands/compile_commands.json .
-	@echo " compile_commands.json generated "
+	@rm -f $(TARGET)
+	@rm -f $(TEST_DIR)/Test*
+	@rm -f /tmp/out1.txt /tmp/out2.txt
+	@echo "Clean complete"
 
 help:
 	@echo "Router Project Build System"
@@ -184,32 +162,21 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Build Targets:"
-	@echo "  release     - Build optimized release version"
 	@echo "  debug       - Build debug version with symbols (default)"
+	@echo "  release     - Build optimized release version"
 	@echo ""
 	@echo "Sanitizer Builds:"
 	@echo "  asan        - Build with AddressSanitizer"
 	@echo "  ubsan       - Build with UndefinedBehaviorSanitizer"
-	@echo "  tsan        - Build with ThreadSanitizer"
 	@echo "  sanitize    - Build with ASan + UBSan combined"
 	@echo ""
-	@echo "Testing:"
-	@echo "  test        - Build and run property-based tests with RapidCheck"
-	@echo "  test-asan   - Build and run tests with AddressSanitizer"
-	@echo "  test-verbose- Build and run tests with verbose output"
-	@echo ""
-	@echo "Analysis:"
-	@echo "  analyze     - Build with clang-tidy and cppcheck"
+	@echo "Utilities:"
 	@echo "  format      - Format source code with clang-format"
-	@echo ""
-	@echo "Other:"
 	@echo "  clean       - Remove build artifacts"
-	@echo "  distclean   - Deep clean including IDE files"
-	@echo "  compile-commands - Generate compile_commands.json for IDEs"
 	@echo "  help        - Show this help message"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make                    # Build debug"
-	@echo "  make test               # Run property-based tests"
-	@echo "  make test-asan          # Run tests with memory checking"
+	@echo "  make                  # Build debug"
+	@echo "  make release          # Build optimized"
+	@echo "  make test-samples     # Test against expected output"
 	@echo "  make sanitize && ./router -c cfg.txt -r routes.txt"
